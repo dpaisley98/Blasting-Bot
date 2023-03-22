@@ -8,10 +8,13 @@ public class MeshGenerator : MonoBehaviour {
     List<int> triangles;
 
     Dictionary<int, List<Triangle>> triangleDict = new Dictionary<int, List<Triangle>>();
+    List<GameObject> roomObjects = new List<GameObject>();
+
     List<List<int>> outlines = new List<List<int>>();
     HashSet<int> checkedVertices = new HashSet<int>();
 
     public MeshFilter walls;
+    public MeshFilter level;
 
     public void GenerateMesh(int[,] map, float squareSize){
         triangleDict.Clear();
@@ -28,15 +31,75 @@ public class MeshGenerator : MonoBehaviour {
         }
 
         Mesh mesh = new Mesh();
-        GetComponent<MeshFilter>().mesh = mesh;
+        level.mesh = mesh;
         mesh.vertices = vertices.ToArray();
         mesh.triangles = triangles.ToArray();
         mesh.RecalculateNormals();
 
+        int tileAmount = 10;
+        Vector2[] uvs = new Vector2[vertices.Count];
+        for (int i = 0; i < vertices.Count; i++) {
+            float percentX = Mathf.InverseLerp(-map.GetLength(0) / 2 * squareSize, map.GetLength(0) / 2 * squareSize, vertices[i].x) * tileAmount;
+            float percentY = Mathf.InverseLerp(-map.GetLength(0) / 2 * squareSize, map.GetLength(0) / 2 * squareSize, vertices[i].z) * tileAmount;
+
+            uvs[i] = new Vector2(percentX, percentY);
+        }
+
+        mesh.uv = uvs;
+        MeshCollider currentCollider = level.gameObject.GetComponent<MeshCollider>();
+        Destroy(currentCollider);
+        MeshCollider levelCollider = level.gameObject.AddComponent<MeshCollider>();
+        levelCollider.sharedMesh = mesh;
+
         CreateWallMesh();
     }
 
+    /*void GenerateRoomMeshes(List<int[,,]> maps, float squareSize) {
+        // Destroy any previously generated room GameObjects
+        foreach (GameObject roomObject in roomObjects)
+        {
+            Destroy(roomObject);
+        }
+        roomObjects.Clear();
+
+        // Create a new GameObject for each room
+        foreach (int[,,] roomMap in maps) 
+        {
+            GameObject roomObject = new GameObject("Roo");
+            MeshFilter mf = roomObject.AddComponent<MeshFilter>();
+            MeshRenderer mr = roomObject.AddComponent<MeshRenderer>();
+
+            // Create a new mesh for the room
+            Mesh roomMesh = new Mesh();
+            mf.mesh = roomMesh;
+
+            List<Vector3> roomVertices = roomMap;
+            List<int> roomTriangles = new List<int>();
+            List<Vector2> roomUVs = new List<Vector2>();
+
+            // Create triangles and UVs for the room mesh
+            for (int j = 0; j < roomVertices.Count; j++)
+            {
+                roomTriangles.Add(j);
+                roomUVs.Add(new Vector2(roomVertices[j].x, roomVertices[j].z));
+            }
+
+            roomMesh.vertices = roomVertices.ToArray();
+            roomMesh.triangles = roomTriangles.ToArray();
+            roomMesh.uv = roomUVs.ToArray();
+
+            // Set the material for the room mesh renderer
+            mr.material = roomMaterial;
+
+            // Add the generated room GameObject to the list
+            roomObjects.Add(roomObject);
+        }
+    }*/
+
     void CreateWallMesh() {
+        MeshCollider currentCollider = walls.gameObject.GetComponent<MeshCollider> ();
+        Destroy(currentCollider);
+
         CalculateMeshOutlines();
         List<Vector3> wallVertices = new List<Vector3>();
         List<int> wallTriangles = new List<int>();
@@ -48,8 +111,8 @@ public class MeshGenerator : MonoBehaviour {
                 int startIndex = wallVertices.Count;
                 wallVertices.Add(vertices[outline[i]]);
                 wallVertices.Add(vertices[outline[i+1]]);
-                wallVertices.Add(vertices[outline[i]] - Vector3.up * wallHeight);
-                wallVertices.Add(vertices[outline[i+1]] - Vector3.up * wallHeight);
+                wallVertices.Add(vertices[outline[i]] + Vector3.up * wallHeight);
+                wallVertices.Add(vertices[outline[i+1]] + Vector3.up * wallHeight);
 
                 wallTriangles.Add(startIndex);
                 wallTriangles.Add(startIndex + 2);
@@ -58,15 +121,17 @@ public class MeshGenerator : MonoBehaviour {
                 wallTriangles.Add(startIndex + 3);
                 wallTriangles.Add(startIndex + 1);
                 wallTriangles.Add(startIndex);
-
             }
         }
 
         wallMesh.vertices = wallVertices.ToArray();
         wallMesh.triangles = wallTriangles.ToArray();
         walls.mesh = wallMesh;
-    }
 
+        MeshCollider wallCollider = walls.gameObject.AddComponent<MeshCollider>();
+        wallCollider.sharedMesh = wallMesh;
+    }
+    //create opposite config for other mesh, pass two arrays to the meshfrompoints, then create two triangle configs per if statement and assign vertices to two different vertices arrays 
     void TriangulateSquares(Square square) {
         switch(square.configuration) {
             case 0:
@@ -175,7 +240,6 @@ public class MeshGenerator : MonoBehaviour {
         public bool Contains(int vertexIndex) {
             return vertexIndexA == vertexIndex || vertexIndexB == vertexIndex || vertexIndexC == vertexIndex;
         }
-
     }
 
     void CreateTriangle(Node a, Node b, Node c) {
@@ -290,7 +354,7 @@ public class MeshGenerator : MonoBehaviour {
     public class SquareGrid {
         public Square[,] squares;
 
-        public SquareGrid(int[,] map, float squareSize) {
+        public SquareGrid(int[,] map, float squareSize, float height = 0) {
             int nodeCountX = map.GetLength(0);
             int nodeCountY = map.GetLength(1);
             float mapWidth = nodeCountX * squareSize;
@@ -300,7 +364,7 @@ public class MeshGenerator : MonoBehaviour {
 
             for(int x = 0; x < nodeCountX; x++ ) {
                 for(int y = 0; y < nodeCountY; y++ ) {
-                    Vector3 position = new Vector3(-mapWidth/2 + x * squareSize + squareSize/2, 0, -mapHeight/2 + y * squareSize + squareSize/2);
+                    Vector3 position = new Vector3(-mapWidth/2 + x * squareSize + squareSize/2, height, -mapHeight/2 + y * squareSize + squareSize/2);
                     controlNodes[x,y] = new ControlNode(position, map[x,y] == 1, squareSize);
                 }
             }
