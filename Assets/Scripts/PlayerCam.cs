@@ -5,19 +5,18 @@ using UnityEngine;
 public class PlayerCam : MonoBehaviour
 {
     // Start is called before the first frame update
-    private float xRotation = 0f;
-    private float yRotation;
-    public float xSensitivity = 30f;
-    public float ySensitivity = 30f;
-
+    private float xRotation = 0f, yRotation;
+    public float xSensitivity = 30f, ySensitivity = 30f;
     public Transform orientation;
 
-    void Start(){
+    void Start()
+    {
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
 
-    void Update(){
+    void Update()
+    {
         float mouseX = Input.GetAxisRaw("Mouse X") * Time.deltaTime * xSensitivity;
         float mouseY = Input.GetAxisRaw("Mouse Y") * Time.deltaTime * ySensitivity;
 

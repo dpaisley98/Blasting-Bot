@@ -51,7 +51,6 @@ public class GunShoot : MonoBehaviour
         return cam.transform.forward;
     }
 
-
     private IEnumerator ShotEffect()
     {
         laserLine.enabled = true;

@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 782380223820299795}
   - component: {fileID: 782380223820299794}
   - component: {fileID: 782380223820299793}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: RobotCapsule
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -107,7 +107,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 782380224285797514}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: CameraPosition
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -140,10 +140,10 @@ GameObject:
   - component: {fileID: 782380224705454273}
   - component: {fileID: 782380224705454274}
   - component: {fileID: 782380224705454275}
-  - component: {fileID: 782380224705454332}
-  m_Layer: 0
+  - component: {fileID: 326018080}
+  m_Layer: 9
   m_Name: RobotPlayer
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -164,7 +164,7 @@ Transform:
   - {fileID: 782380224723880603}
   - {fileID: 782380224285797514}
   m_Father: {fileID: 0}
-  m_RootOrder: 0
+  m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &782380224705454274
 Rigidbody:
@@ -174,7 +174,7 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 782380224705454272}
   serializedVersion: 2
-  m_Mass: 1
+  m_Mass: 2
   m_Drag: 0
   m_AngularDrag: 0.05
   m_UseGravity: 1
@@ -194,19 +194,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 082b034f1f0602b48b16e62a11ad2d04, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  movementSpeed: 0
-  terminalVelocity: 0
-  groundDrag: 0
-  jumpForce: 0
-  jumpCooldown: 0
-  airMultiplier: 0
-  playerHeight: 0
+  movementSpeed: 9
+  terminalVelocity: 50
+  groundDrag: 4
+  jumpForce: 8
+  jumpCooldown: 1
+  airMultiplier: 0.4
+  playerHeight: 2
   whatIsGround:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 128
   onGround: 0
-  orientation: {fileID: 0}
---- !u!114 &782380224705454332
+  orientation: {fileID: 782380224723880603}
+--- !u!114 &326018080
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -215,14 +215,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 782380224705454272}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e82924dec31868b4f9a78360e4b07bee, type: 3}
+  m_Script: {fileID: 11500000, guid: 7d41dc13e19959b4cb390abc07e6be1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fireRate: 0.5
-  weaponRange: 50
-  hitForce: 100
-  gunEnd: {fileID: 0}
-  cam: {fileID: 0}
+  playerSource: {fileID: 782380224723880603}
+  map: {fileID: 0}
+  teleporter:
+    serializedVersion: 2
+    m_Bits: 0
+  interactRange: 15
 --- !u!1 &782380224723880602
 GameObject:
   m_ObjectHideFlags: 0
@@ -232,7 +233,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 782380224723880603}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Orientation
   m_TagString: Untagged
   m_Icon: {fileID: 0}

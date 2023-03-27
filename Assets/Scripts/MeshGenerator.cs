@@ -1,118 +1,163 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.AI.Navigation;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class MeshGenerator : MonoBehaviour {
-    public SquareGrid squareGrid;
     List<Vector3> vertices;
     List<int> triangles;
-
     Dictionary<int, List<Triangle>> triangleDict = new Dictionary<int, List<Triangle>>();
-    List<GameObject> roomObjects = new List<GameObject>();
-
     List<List<int>> outlines = new List<List<int>>();
     HashSet<int> checkedVertices = new HashSet<int>();
+    public MeshFilter walls, ground, platforms;
 
-    public MeshFilter walls;
-    public MeshFilter level;
-
-    public void GenerateMesh(int[,] map, float squareSize){
+    public void GenerateMesh(int[,] map, float squareSize, int[,] heightMap)
+    {
+        IsMeshGenerated = false;
         triangleDict.Clear();
         outlines.Clear();
         checkedVertices.Clear();
-        squareGrid = new SquareGrid(map, squareSize);
+        SquareGrid squareGrid = new SquareGrid(map, squareSize);
         vertices = new List<Vector3>();
         triangles = new List<int>();
 
-        for(int x = 0; x < squareGrid.squares.GetLength(0); x++ ) {
-            for(int y = 0; y < squareGrid.squares.GetLength(1); y++ ) { 
+        for(int x = 0; x < squareGrid.squares.GetLength(0); x++ ) 
+        {
+            for(int y = 0; y < squareGrid.squares.GetLength(1); y++ ) 
+            { 
                 TriangulateSquares(squareGrid.squares[x,y]);
             }
         }
 
         Mesh mesh = new Mesh();
-        level.mesh = mesh;
+        ground.mesh = mesh;
         mesh.vertices = vertices.ToArray();
         mesh.triangles = triangles.ToArray();
         mesh.RecalculateNormals();
 
         int tileAmount = 10;
         Vector2[] uvs = new Vector2[vertices.Count];
-        for (int i = 0; i < vertices.Count; i++) {
+        for (int i = 0; i < vertices.Count; i++) 
+        {
             float percentX = Mathf.InverseLerp(-map.GetLength(0) / 2 * squareSize, map.GetLength(0) / 2 * squareSize, vertices[i].x) * tileAmount;
             float percentY = Mathf.InverseLerp(-map.GetLength(0) / 2 * squareSize, map.GetLength(0) / 2 * squareSize, vertices[i].z) * tileAmount;
-
             uvs[i] = new Vector2(percentX, percentY);
         }
 
         mesh.uv = uvs;
-        MeshCollider currentCollider = level.gameObject.GetComponent<MeshCollider>();
+
+        MeshCollider currentCollider = ground.gameObject.GetComponent<MeshCollider>();
         Destroy(currentCollider);
-        MeshCollider levelCollider = level.gameObject.AddComponent<MeshCollider>();
+        MeshCollider levelCollider = ground.gameObject.AddComponent<MeshCollider>();
         levelCollider.sharedMesh = mesh;
 
+        CreatePlatformMesh(map, squareSize, heightMap);
         CreateWallMesh();
+        GenerateNavMesh();
+        IsMeshGenerated = true;
     }
 
-    /*void GenerateRoomMeshes(List<int[,,]> maps, float squareSize) {
-        // Destroy any previously generated room GameObjects
-        foreach (GameObject roomObject in roomObjects)
-        {
-            Destroy(roomObject);
-        }
-        roomObjects.Clear();
+    void GenerateNavMesh() 
+    {
+        NavMesh.RemoveAllNavMeshData();
 
-        // Create a new GameObject for each room
-        foreach (int[,,] roomMap in maps) 
-        {
-            GameObject roomObject = new GameObject("Roo");
-            MeshFilter mf = roomObject.AddComponent<MeshFilter>();
-            MeshRenderer mr = roomObject.AddComponent<MeshRenderer>();
-
-            // Create a new mesh for the room
-            Mesh roomMesh = new Mesh();
-            mf.mesh = roomMesh;
-
-            List<Vector3> roomVertices = roomMap;
-            List<int> roomTriangles = new List<int>();
-            List<Vector2> roomUVs = new List<Vector2>();
-
-            // Create triangles and UVs for the room mesh
-            for (int j = 0; j < roomVertices.Count; j++)
+        NavMeshData navMeshData = NavMeshBuilder.BuildNavMeshData(
+            NavMesh.GetSettingsByID(0), // NavMeshBuildSettings
+            new List<NavMeshBuildSource> 
             {
-                roomTriangles.Add(j);
-                roomUVs.Add(new Vector2(roomVertices[j].x, roomVertices[j].z));
-            }
+                new NavMeshBuildSource 
+                {
+                    shape = NavMeshBuildSourceShape.Mesh,
+                    sourceObject = ground.mesh,
+                    transform = ground.transform.localToWorldMatrix,
+                    area = 0
+                },
+                new NavMeshBuildSource 
+                {
+                    shape = NavMeshBuildSourceShape.Mesh,
+                    sourceObject = walls.mesh,
+                    transform = walls.transform.localToWorldMatrix,
+                    area = 1
+                },
+                new NavMeshBuildSource 
+                {
+                    shape = NavMeshBuildSourceShape.Mesh,
+                    sourceObject = platforms.mesh,
+                    transform = platforms.transform.localToWorldMatrix,
+                    area = 0
+                },
+                new NavMeshBuildSource 
+                {
+                    shape = NavMeshBuildSourceShape.Box,
+                    size = new Vector3(1000, 250, 1000),
+                    transform = transform.localToWorldMatrix,
+                    area = 10 // The same layer that you set for your NavMeshSurface
+                }
+            }, 
+            new Bounds(Vector3.zero, new Vector3(1000, 1000, 1000)), 
+            Vector3.zero, 
+            Quaternion.identity);
 
-            roomMesh.vertices = roomVertices.ToArray();
-            roomMesh.triangles = roomTriangles.ToArray();
-            roomMesh.uv = roomUVs.ToArray();
+        NavMesh.AddNavMeshData(navMeshData);
 
-            // Set the material for the room mesh renderer
-            mr.material = roomMaterial;
-
-            // Add the generated room GameObject to the list
-            roomObjects.Add(roomObject);
+        // Assign NavMesh to NavMeshSurface if one exists
+        NavMeshSurface navMeshSurface = GetComponent<NavMeshSurface>();
+        if (navMeshSurface != null) 
+        {
+            navMeshSurface.RemoveData();
+            navMeshSurface.BuildNavMesh();
         }
-    }*/
+    }
 
-    void CreateWallMesh() {
-        MeshCollider currentCollider = walls.gameObject.GetComponent<MeshCollider> ();
+    void CreatePlatformMesh(int[,] map, float squareSize, int[,] heightMap) 
+    {
+        triangleDict.Clear();
+        outlines.Clear();
+        checkedVertices.Clear();
+        SquareGrid squareGrid = new SquareGrid(map, squareSize, heightMap);
+        vertices = new List<Vector3>();
+        triangles = new List<int>();
+
+        for(int x = 0; x < squareGrid.squares.GetLength(0); x++ ) 
+        {
+            for(int y = 0; y < squareGrid.squares.GetLength(1); y++ ) 
+            { 
+                TriangulateSquares(squareGrid.squares[x,y]);
+            }
+        }
+
+        Mesh platformMesh = new Mesh();
+        platforms.mesh = platformMesh;
+        platformMesh.vertices = vertices.ToArray();
+        platformMesh.triangles = triangles.ToArray();
+        platformMesh.RecalculateNormals();
+
+        MeshCollider currentCollider = platforms.gameObject.GetComponent<MeshCollider> ();
         Destroy(currentCollider);
+        MeshCollider wallCollider = platforms.gameObject.AddComponent<MeshCollider>();
+        wallCollider.sharedMesh = platformMesh;
+    }
 
+    void CreateWallMesh() 
+    {
         CalculateMeshOutlines();
         List<Vector3> wallVertices = new List<Vector3>();
         List<int> wallTriangles = new List<int>();
         Mesh wallMesh = new Mesh();
         float wallHeight = 5;
 
-        foreach(List<int> outline in outlines) {
-            for (int i =0; i < outline.Count -1; i++) {
+        foreach(List<int> outline in outlines) 
+        {
+            for (int i =0; i < outline.Count -1; i++) 
+            {
+                wallHeight = vertices[outline[i]].y;
+
                 int startIndex = wallVertices.Count;
                 wallVertices.Add(vertices[outline[i]]);
                 wallVertices.Add(vertices[outline[i+1]]);
-                wallVertices.Add(vertices[outline[i]] + Vector3.up * wallHeight);
-                wallVertices.Add(vertices[outline[i+1]] + Vector3.up * wallHeight);
+                wallVertices.Add(vertices[outline[i]] - Vector3.up * wallHeight);
+                wallVertices.Add(vertices[outline[i+1]] - Vector3.up * wallHeight);
 
                 wallTriangles.Add(startIndex);
                 wallTriangles.Add(startIndex + 2);
@@ -128,12 +173,16 @@ public class MeshGenerator : MonoBehaviour {
         wallMesh.triangles = wallTriangles.ToArray();
         walls.mesh = wallMesh;
 
+        MeshCollider currentCollider = walls.gameObject.GetComponent<MeshCollider> ();
+        Destroy(currentCollider);
         MeshCollider wallCollider = walls.gameObject.AddComponent<MeshCollider>();
         wallCollider.sharedMesh = wallMesh;
     }
-    //create opposite config for other mesh, pass two arrays to the meshfrompoints, then create two triangle configs per if statement and assign vertices to two different vertices arrays 
-    void TriangulateSquares(Square square) {
-        switch(square.configuration) {
+
+    void TriangulateSquares(Square square) 
+    {
+        switch(square.configuration) 
+        {
             case 0:
                 break;
             case 1:
@@ -188,39 +237,44 @@ public class MeshGenerator : MonoBehaviour {
         }
     }
 
-    void MeshFromPoints(params Node[] points) {
+    void MeshFromPoints(params Node[] points) 
+    {
         AssignVertices(points);
-        if(points.Length >= 3) {
+        if(points.Length >= 3) 
             CreateTriangle(points[0], points[1], points[2]);
-        }
-        if(points.Length >= 4) {
+
+        if(points.Length >= 4) 
             CreateTriangle(points[0], points[2], points[3]);
-        }
-        if(points.Length >= 5) {
+
+        if(points.Length >= 5) 
             CreateTriangle(points[0], points[3], points[4]);
-        }
-        if(points.Length >= 6) {
+
+        if(points.Length >= 6) 
             CreateTriangle(points[0], points[4], points[5]);
-        }
     }
 
-    void AssignVertices(Node[] points) {
-        for(int i = 0; i < points.Length; i++) {
-            if(points[i].vertexIndex == -1) {
+    void AssignVertices(Node[] points) 
+    {
+        for(int i = 0; i < points.Length; i++) 
+        {
+            if(points[i].vertexIndex == -1) 
+            {
                 points[i].vertexIndex = vertices.Count;
                 vertices.Add(points[i].position);
             }
         }
     }
 
-    struct Triangle {
+    struct Triangle 
+    {
         public int vertexIndexA;                
         public int vertexIndexB;
         public int vertexIndexC;
 
         int[] vertices;
 
-        public Triangle (int a, int b, int c) {
+        public Triangle (int a, int b, int c) 
+        {
             vertexIndexA = a;
             vertexIndexB = b;
             vertexIndexC = c;
@@ -231,18 +285,22 @@ public class MeshGenerator : MonoBehaviour {
             vertices[2] = c;
         }
 
-        public int this[int i] {
-            get {
+        public int this[int i] 
+        {
+            get 
+            {
                 return vertices[i];
             }
         }
 
-        public bool Contains(int vertexIndex) {
+        public bool Contains(int vertexIndex) 
+        {
             return vertexIndexA == vertexIndex || vertexIndexB == vertexIndex || vertexIndexC == vertexIndex;
         }
     }
 
-    void CreateTriangle(Node a, Node b, Node c) {
+    void CreateTriangle(Node a, Node b, Node c) 
+    {
         triangles.Add(a.vertexIndex);
         triangles.Add(b.vertexIndex);
         triangles.Add(c.vertexIndex);
@@ -253,19 +311,25 @@ public class MeshGenerator : MonoBehaviour {
         AddTriangleToDictinary(triangle.vertexIndexC, triangle);
     }
 
-    void AddTriangleToDictinary(int vertextIndexKey, Triangle triangle) {
-        if(triangleDict.ContainsKey(vertextIndexKey)) {
+    void AddTriangleToDictinary(int vertextIndexKey, Triangle triangle) 
+    {
+        if(triangleDict.ContainsKey(vertextIndexKey)) 
+        {
             triangleDict[vertextIndexKey].Add(triangle);
-        } else {
+        } else 
+        {
             List<Triangle> triangleList = new List<Triangle>();
             triangleList.Add(triangle);
             triangleDict.Add(vertextIndexKey, triangleList);
         }
     }
 
-    void CalculateMeshOutlines() {
-        for(int vertexI = 0; vertexI < vertices.Count; vertexI++) {
-            if(!checkedVertices.Contains(vertexI)){
+    void CalculateMeshOutlines() 
+    {
+        for(int vertexI = 0; vertexI < vertices.Count; vertexI++) 
+        {
+            if(!checkedVertices.Contains(vertexI))
+            {
                 int newOutlineVertex = GetConnectedOutlineVertex(vertexI);
                 if(newOutlineVertex != -1) {
                     checkedVertices.Add(vertexI);
@@ -280,26 +344,33 @@ public class MeshGenerator : MonoBehaviour {
         }
     }
 
-    void FollowOutline(int vertexIndex, int outlineIndex) {
+    void FollowOutline(int vertexIndex, int outlineIndex) 
+    {
         outlines[outlineIndex].Add(vertexIndex);
         checkedVertices.Add(vertexIndex);
         int nextVertexIndex = GetConnectedOutlineVertex(vertexIndex);
 
-        if(nextVertexIndex != -1) {
+        if(nextVertexIndex != -1) 
+        {
             FollowOutline(nextVertexIndex, outlineIndex);
         }
     }
     
-    int GetConnectedOutlineVertex(int vertexIndex) {
+    int GetConnectedOutlineVertex(int vertexIndex) 
+    {
         List<Triangle> trianglesContainigVertex = triangleDict[vertexIndex];
 
-        for(int i = 0; i < trianglesContainigVertex.Count; i++) { 
+        for(int i = 0; i < trianglesContainigVertex.Count; i++) 
+        { 
             Triangle triangle = trianglesContainigVertex[i];
 
-            for(int j = 0; j < 3; j++) {
+            for(int j = 0; j < 3; j++) 
+            {
                 int vertexB = triangle[j];
-                if (vertexB != vertexIndex && !checkedVertices.Contains(vertexB)){
-                    if(IsOutlineEdge(vertexIndex, vertexB)) {
+                if (vertexB != vertexIndex && !checkedVertices.Contains(vertexB))
+                {
+                    if(IsOutlineEdge(vertexIndex, vertexB)) 
+                    {
                         return vertexB;
                     }
                 }
@@ -309,76 +380,93 @@ public class MeshGenerator : MonoBehaviour {
         return -1;
     }
 
-    bool IsOutlineEdge(int vertexA, int vertexB) {
+    bool IsOutlineEdge(int vertexA, int vertexB) 
+    {
         List<Triangle> trianglesContainigVertexA = triangleDict[vertexA];
         int sharedTriangleCount = 0;
 
-        for(int i = 0; i < trianglesContainigVertexA.Count; i++) {
-            if(trianglesContainigVertexA[i].Contains(vertexB)) {
+        for(int i = 0; i < trianglesContainigVertexA.Count; i++) 
+        {
+            if(trianglesContainigVertexA[i].Contains(vertexB)) 
+            {
                 sharedTriangleCount++;
-                if(sharedTriangleCount > 1){
+                if(sharedTriangleCount > 1)
+                {
                     break;
                 }
             }
         }
+
         return sharedTriangleCount == 1;
     }
 
-    void OnDrawGizmos() {
-/*         if(squareGrid != null) {
-            for(int x = 0; x < squareGrid.squares.GetLength(0); x++ ) {
-                for(int y = 0; y < squareGrid.squares.GetLength(1); y++ ) { 
-                    Gizmos.color = (squareGrid.squares[x,y].topLeft.active)?Color.black:Color.white; 
-                    Gizmos.DrawCube(squareGrid.squares[x,y].topLeft.position, Vector3.one * .4f);
+    public bool IsMeshGenerated { get; private set; } = false;
 
-                    Gizmos.color = (squareGrid.squares[x,y].topRight.active)?Color.black:Color.white; 
-                    Gizmos.DrawCube(squareGrid.squares[x,y].topRight.position, Vector3.one * .4f); 
+    public class SquareGrid 
+    {
+        public Square[,] squares, squarePlatforms;
 
-                    Gizmos.color = (squareGrid.squares[x,y].bottomRight.active)?Color.black:Color.white; 
-                    Gizmos.DrawCube(squareGrid.squares[x,y].bottomRight.position, Vector3.one * .4f);
-
-                    Gizmos.color = (squareGrid.squares[x,y].bottomLeft.active)?Color.black:Color.white; 
-                    Gizmos.DrawCube(squareGrid.squares[x,y].bottomLeft.position, Vector3.one * .4f); 
-
-                    Gizmos.color = Color.gray;
-                    Gizmos.DrawCube(squareGrid.squares[x,y].centreTop.position, Vector3.one * .15f);
-                    Gizmos.DrawCube(squareGrid.squares[x,y].centreBottom.position, Vector3.one * .15f);
-                    Gizmos.DrawCube(squareGrid.squares[x,y].centreLeft.position, Vector3.one * .15f);
-                    Gizmos.DrawCube(squareGrid.squares[x,y].centreRight.position, Vector3.one * .15f);
-
-                }
-            }
-        } */
-    }
-
-    public class SquareGrid {
-        public Square[,] squares;
-
-        public SquareGrid(int[,] map, float squareSize, float height = 0) {
+        public SquareGrid(int[,] map, float squareSize) 
+        {
             int nodeCountX = map.GetLength(0);
             int nodeCountY = map.GetLength(1);
             float mapWidth = nodeCountX * squareSize;
             float mapHeight = nodeCountY * squareSize;
 
-            ControlNode[,] controlNodes = new ControlNode[nodeCountX, nodeCountY];
+            ControlNode[,] controlNodesGround = new ControlNode[nodeCountX, nodeCountY];
 
-            for(int x = 0; x < nodeCountX; x++ ) {
-                for(int y = 0; y < nodeCountY; y++ ) {
-                    Vector3 position = new Vector3(-mapWidth/2 + x * squareSize + squareSize/2, height, -mapHeight/2 + y * squareSize + squareSize/2);
-                    controlNodes[x,y] = new ControlNode(position, map[x,y] == 1, squareSize);
+            for(int x = 0; x < nodeCountX; x++ ) 
+            {
+                for(int y = 0; y < nodeCountY; y++ ) 
+                {
+                    Vector3 position = new Vector3(-mapWidth/2 + x * squareSize + squareSize/2, 0, -mapHeight/2 + y * squareSize + squareSize/2);
+                    controlNodesGround[x,y] = new ControlNode(position, map[x,y] == 1, squareSize);
                 }
             }
 
             squares = new Square[nodeCountX -1, nodeCountY -1];
-            for(int x = 0; x < nodeCountX -1; x++ ) {
-                for(int y = 0; y < nodeCountY -1; y++ ) {
-                    squares[x,y] = new Square(controlNodes[x,y+1], controlNodes[x+1,y+1], controlNodes[x+1,y], controlNodes[x,y]);
+            for(int x = 0; x < nodeCountX -1; x++ ) 
+            {
+                for(int y = 0; y < nodeCountY -1; y++ ) 
+                {
+                    squares[x,y] = new Square(controlNodesGround[x,y+1], controlNodesGround[x+1,y+1], controlNodesGround[x+1,y], controlNodesGround[x,y]);
+                }
+            }           
+        }
+
+        public SquareGrid(int[,] map, float squareSize, int[,] height) 
+        {
+            int nodeCountX = map.GetLength(0);
+            int nodeCountY = map.GetLength(1);
+            float mapWidth = nodeCountX * squareSize;
+            float mapHeight = nodeCountY * squareSize;
+
+            ControlNode[,] controlNodesPlatforms = new ControlNode[nodeCountX, nodeCountY];
+
+            for(int x = 0; x < nodeCountX; x++ ) 
+            {
+                for(int y = 0; y < nodeCountY; y++ ) 
+                {
+                    Vector3 position = new Vector3();
+                    position = new Vector3(-mapWidth/2 + x * squareSize + squareSize/2, 0, -mapHeight/2 + y * squareSize + squareSize/2);
+                    position.y = height[x,y];
+                    controlNodesPlatforms[x,y] = new ControlNode(position, map[x,y] == 0, squareSize);
+                }
+            }
+
+            squares = new Square[nodeCountX -1, nodeCountY -1];
+            for(int x = 0; x < nodeCountX -1; x++ ) 
+            {
+                for(int y = 0; y < nodeCountY -1; y++ ) 
+                {
+                    squares[x,y] = new Square(controlNodesPlatforms[x,y+1], controlNodesPlatforms[x+1,y+1], controlNodesPlatforms[x+1,y], controlNodesPlatforms[x,y]);
                 }
             }           
         }
     }
 
-    public class Square {
+    public class Square 
+    {
         public ControlNode topLeft, topRight, bottomLeft, bottomRight;
         public Node centreTop, centreRight, centreBottom, centreLeft;
         public int configuration;
@@ -395,32 +483,36 @@ public class MeshGenerator : MonoBehaviour {
 
             if(topLeft.active)
                 configuration +=8;
-                
+
             if(topRight.active)
                 configuration +=4;
-                
+
             if(bottomRight.active)
                 configuration +=2;
-                
+
             if(bottomLeft.active)
                 configuration +=1;
         }
     }
 
-    public class Node {
+    public class Node 
+    {
         public Vector3 position;
         public int vertexIndex = -1;
 
-        public Node(Vector3 _pos) {
+        public Node(Vector3 _pos) 
+        {
             position = _pos;
         }
     }
 
-    public class ControlNode : Node {
+    public class ControlNode : Node 
+    {
         public bool active;
         public Node above, right;
 
-        public ControlNode(Vector3 _pos, bool _active, float squareSize) : base(_pos) {
+        public ControlNode(Vector3 _pos, bool _active, float squareSize) : base(_pos) 
+        {
             active = _active;
             above = new Node(position + Vector3.forward * squareSize/2f);
             right = new Node(position + Vector3.right * squareSize/2f);

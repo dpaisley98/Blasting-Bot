@@ -21,12 +21,12 @@ public class PlayerMovement : MonoBehaviour
     Vector3 movementDirection;
     Vector3 recoilDirection;
     Rigidbody rigidBody;
-    private GunShoot gun;
+    private GunController gun;
 
     // Start is called before the first frame update
     void Start()
     {
-        gun = this.GetComponent<GunShoot>();
+        gun = this.GetComponent<GunController>();
         rigidBody = this.GetComponent<Rigidbody>();
         rigidBody.freezeRotation = true;
         readyToJump = true;
@@ -45,54 +45,65 @@ public class PlayerMovement : MonoBehaviour
         MaxSpeed();
     }
 
-    private void FixedUpdate() {
+    private void FixedUpdate() 
+    {
         MovePlayer();
     }
 
-    private void PlayerInput() {
+    private void PlayerInput() 
+    {
         horizontalInput = Input.GetAxisRaw("Horizontal");
         verticalInput = Input.GetAxisRaw("Vertical");
 
-        if(Input.GetKey(jump) && onGround && readyToJump){
+        if(Input.GetKey(jump) && onGround && readyToJump)
+        {
             readyToJump = false;
             Jump();
             Invoke(nameof(ResetJump), jumpCooldown);
         }
 
-        if(Input.GetKey(shoot)){
-            recoilDirection = gun.Shoot();
-            rigidBody.AddForce((recoilDirection.normalized * -1), ForceMode.Impulse);
+        if(Input.GetKey(shoot))
+        {
+            //recoilDirection = gun.Shoot();
+            //rigidBody.AddForce((recoilDirection.normalized * -1), ForceMode.Impulse);
         }
-
     }
 
-    private void MovePlayer() {
+    private void MovePlayer() 
+    {
         movementDirection = orientation.forward * verticalInput + orientation.right * horizontalInput;
-        if(onGround){
+        if(onGround)
+        {
             rigidBody.AddForce(movementDirection.normalized * movementSpeed * 10f, ForceMode.Force);
-        }else if(!onGround){
+        }else if(!onGround)
+        {
             rigidBody.AddForce(movementDirection.normalized * movementSpeed * 10f * airMultiplier, ForceMode.Force);
         }
     }
 
-    private void MaxSpeed() {
+    private void MaxSpeed() 
+    {
         Vector3 flatVelocity = new Vector3(rigidBody.velocity.x, 0f, rigidBody.velocity.z);
 
-        if(flatVelocity.magnitude > movementSpeed && onGround) {
+        if(flatVelocity.magnitude > movementSpeed && onGround) 
+        {
             Vector3 limitVelocity = flatVelocity.normalized * movementSpeed;
             rigidBody.velocity =new Vector3(limitVelocity.x, rigidBody.velocity.y, limitVelocity.z);
-        } else if(flatVelocity.magnitude > terminalVelocity && !onGround){
+        } else if(flatVelocity.magnitude > terminalVelocity && !onGround)
+        {
             Vector3 limitVelocity = flatVelocity.normalized * terminalVelocity;
-            rigidBody.velocity =new Vector3(limitVelocity.x, rigidBody.velocity.y, limitVelocity.z);
+            rigidBody.velocity = new Vector3(limitVelocity.x, rigidBody.velocity.y, limitVelocity.z);
         }
     }  
 
-    public void Jump() {
+    public void Jump() 
+    {
         rigidBody.velocity = new Vector3(rigidBody.velocity.x, 0f, rigidBody.velocity.z);
         rigidBody.AddForce(transform.up * jumpForce, ForceMode.Impulse);
     }
 
-    private void ResetJump() {
+    private void ResetJump() 
+    {
         readyToJump = true;
     }  
 }
