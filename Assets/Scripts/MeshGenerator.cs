@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using Unity.AI.Navigation;
 using UnityEngine;
@@ -145,7 +144,7 @@ public class MeshGenerator : MonoBehaviour {
         List<Vector3> wallVertices = new List<Vector3>();
         List<int> wallTriangles = new List<int>();
         Mesh wallMesh = new Mesh();
-        float wallHeight = 5;
+        float wallHeight;
 
         foreach(List<int> outline in outlines) 
         {
@@ -306,12 +305,12 @@ public class MeshGenerator : MonoBehaviour {
         triangles.Add(c.vertexIndex);
 
         Triangle triangle = new Triangle (a.vertexIndex, b.vertexIndex, c.vertexIndex);
-        AddTriangleToDictinary(triangle.vertexIndexA, triangle);
-        AddTriangleToDictinary(triangle.vertexIndexB, triangle);
-        AddTriangleToDictinary(triangle.vertexIndexC, triangle);
+        AddTriangleToDictionary(triangle.vertexIndexA, triangle);
+        AddTriangleToDictionary(triangle.vertexIndexB, triangle);
+        AddTriangleToDictionary(triangle.vertexIndexC, triangle);
     }
 
-    void AddTriangleToDictinary(int vertextIndexKey, Triangle triangle) 
+    void AddTriangleToDictionary(int vertextIndexKey, Triangle triangle) 
     {
         if(triangleDict.ContainsKey(vertextIndexKey)) 
         {
@@ -448,8 +447,7 @@ public class MeshGenerator : MonoBehaviour {
                 for(int y = 0; y < nodeCountY; y++ ) 
                 {
                     Vector3 position = new Vector3();
-                    position = new Vector3(-mapWidth/2 + x * squareSize + squareSize/2, 0, -mapHeight/2 + y * squareSize + squareSize/2);
-                    position.y = height[x,y];
+                    position = new Vector3(-mapWidth/2 + x * squareSize + squareSize/2, height[x,y], -mapHeight/2 + y * squareSize + squareSize/2);
                     controlNodesPlatforms[x,y] = new ControlNode(position, map[x,y] == 0, squareSize);
                 }
             }

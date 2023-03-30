@@ -49,7 +49,7 @@ public class BulletController : MonoBehaviour
         foreach (Collider enemy in enemies) 
         {
             enemy.GetComponentInChildren<Rigidbody>().AddExplosionForce(explosionForce, transform.position, explosionRange); 
-            GameObject.Destroy(enemy.gameObject);
+            //GameObject.Destroy(enemy.gameObject);
         }
 
         Invoke("Delay", 0.05f);

@@ -18,12 +18,6 @@ public class MapSpawner : MonoBehaviour
         mapGen = GetComponent<MapGenerator>();
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
     public void StartSpawningEnemies()
     {
         spawnCoroutine = StartCoroutine(SpawnEnemies());
@@ -38,16 +32,19 @@ public class MapSpawner : MonoBehaviour
         }
     }
 
+    private void OnDrawGizmos() {
+        Gizmos.DrawCube(spawnPosition, Vector3.one);
+    }
+    Vector3 spawnPosition;
     private IEnumerator SpawnEnemies()
     {
         while (amountOfEnemies < maxAmountOfEnemies)
         {
-            Vector3 spawnPosition = transform.position + new Vector3(
+            spawnPosition = transform.position + new Vector3(
                 Random.Range(-300f, 300f), 
-                maxHeight,
+                15,
                 Random.Range(-180, 180f) 
             );
-        
             RaycastHit hit;
             if (Physics.Raycast(spawnPosition, Vector3.down, out hit, ground)) {
                 Vector3 objectSpawnPosition = hit.point + Vector3.up * hit.point.y;

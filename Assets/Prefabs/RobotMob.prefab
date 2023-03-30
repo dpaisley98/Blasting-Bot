@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 6810538608221062192}
   - component: {fileID: 4364182242530842821}
   - component: {fileID: 4364182242530842817}
-  - component: {fileID: 4794720021763607465}
+  - component: {fileID: 6528138221223479669}
   m_Layer: 8
   m_Name: flying_robot_prototype
   m_TagString: Untagged
@@ -28,14 +28,14 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5008874389097555429}
-  m_LocalRotation: {x: -0.54813087, y: -0.5698734, z: -0.44463181, w: 0.4208319}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 5355502869714124582}
   m_RootOrder: -1
-  m_LocalEulerAnglesHint: {x: 255.491, y: -1.7819824, z: 269.151}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!33 &8747982302367805690
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -115,7 +115,7 @@ SphereCollider:
   serializedVersion: 2
   m_Radius: 0.95439583
   m_Center: {x: 0.016753765, y: -0.0000000607613, z: -0.013951394}
---- !u!195 &4794720021763607465
+--- !u!195 &6528138221223479669
 NavMeshAgent:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -124,17 +124,17 @@ NavMeshAgent:
   m_GameObject: {fileID: 5008874389097555429}
   m_Enabled: 1
   m_AgentTypeID: 0
-  m_Radius: 0.91850597
+  m_Radius: 0.91850567
   m_Speed: 25
-  m_Acceleration: 12
+  m_Acceleration: 14
   avoidancePriority: 50
   m_AngularSpeed: 120
   m_StoppingDistance: 0
   m_AutoTraverseOffMeshLink: 1
   m_AutoBraking: 1
   m_AutoRepath: 1
-  m_Height: 1.9087915
-  m_BaseOffset: 0.9543958
+  m_Height: 1.908791
+  m_BaseOffset: 0.9543955
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
 --- !u!1 &7596948346270267290
@@ -161,15 +161,15 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7596948346270267290}
-  m_LocalRotation: {x: -0.5054416, y: -0.4395298, z: -0.557001, w: 0.49101138}
-  m_LocalPosition: {x: 0.005772543, y: -0.030040946, z: 0.01846722}
-  m_LocalScale: {x: 4, y: 4, z: 4}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5677007350268329823}
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: -99.601, y: -127.99899, z: 37.994995}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1591979974
 MonoBehaviour:
   m_ObjectHideFlags: 0

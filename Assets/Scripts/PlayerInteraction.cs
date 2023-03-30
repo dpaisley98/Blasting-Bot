@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class PlayerInteraction : MonoBehaviour
 {
-    public Transform playerSource;
+    public Transform player;
     public GameObject map;
     public LayerMask teleporter;
     public float interactRange;
@@ -11,7 +11,7 @@ public class PlayerInteraction : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.E))
         {
-            Ray ray = new Ray(playerSource.position, playerSource.forward);
+            Ray ray = new Ray(player.position, player.forward);
             if (Physics.Raycast(ray, out RaycastHit hit, interactRange, teleporter))
             {
                 GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");

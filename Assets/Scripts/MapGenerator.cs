@@ -6,12 +6,10 @@ using System.Collections;
 public class MapGenerator : MonoBehaviour 
 {
     public int width, height;
-    [Range(0,100)]
-    public int randomFillPercent;
+    [Range(0f,1f)]
+    public float randomFillPercent;
     public int groundTile = 1, platformTile = 0;
-    public string seed;
-    public bool useRandomSeed;
-    List<Room> survivingRooms;
+    List<Platform> survivingPlatforms;
     List<int[,]> platformMaps;
     int[,] map, borderedHeightMap;
 
@@ -48,16 +46,16 @@ public class MapGenerator : MonoBehaviour
         int[,] heightMap = new int[width, height];
         borderedHeightMap = new int[width + borderSize * 2, height + borderSize * 2];
 
-        foreach(Room room in survivingRooms) 
+        foreach(Platform platform in survivingPlatforms) 
         {
-            for(int tileIndex = 0; tileIndex < room.tiles.Count; tileIndex++) 
+            for(int tileIndex = 0; tileIndex < platform.tiles.Count; tileIndex++) 
             {
-                heightMap[room.tiles[tileIndex].tileX, room.tiles[tileIndex].tileY] = room.roomHeight;
+                heightMap[platform.tiles[tileIndex].tileX, platform.tiles[tileIndex].tileY] = platform.platformHeight;
             }
 
-            for(int tileIndex = 0; tileIndex < room.edgeTiles.Count; tileIndex++) 
+            for(int tileIndex = 0; tileIndex < platform.edgeTiles.Count; tileIndex++) 
             {
-                heightMap[room.edgeTiles[tileIndex].tileX, room.edgeTiles[tileIndex].tileY] = room.roomHeight;
+                heightMap[platform.edgeTiles[tileIndex].tileX, platform.edgeTiles[tileIndex].tileY] = platform.platformHeight;
             }
         }
 
@@ -104,119 +102,39 @@ public class MapGenerator : MonoBehaviour
 
     void ProcessMap() 
     {
-        List<List<Coordinate>> wallRegions = GetRegions(groundTile);
-        int wallThresholdSize = 40;
+        List<List<Coordinate>> groundRegions = GetRegions(groundTile);
+        int groundThresholdSize = 40;
 
-        foreach(List<Coordinate> wallRegion in wallRegions) 
+        foreach(List<Coordinate> groundRegion in groundRegions) 
         {
-            if(wallRegion.Count < wallThresholdSize) 
+            if(groundRegion.Count < groundThresholdSize) 
             {
-                foreach(Coordinate tile in wallRegion) 
+                foreach(Coordinate tile in groundRegion) 
                 {
                     map[tile.tileX, tile.tileY] = platformTile;
                 }
             }
         }
 
-        List<List<Coordinate>> roomRegions = GetRegions(platformTile);
-        int roomThresholdSize = 35;
-        survivingRooms = new List<Room>();
+        List<List<Coordinate>> platformRegions = GetRegions(platformTile);
+        int platformThresholdSize = 35;
+        survivingPlatforms = new List<Platform>();
         platformMaps = new List<int[,]>();
 
-        foreach(List<Coordinate> roomRegion in roomRegions) 
+        foreach(List<Coordinate> platformRegion in platformRegions) 
         {
-            if(roomRegion.Count < roomThresholdSize) 
+            if(platformRegion.Count < platformThresholdSize) 
             {
-                foreach(Coordinate tile in roomRegion) 
+                foreach(Coordinate tile in platformRegion) 
                 {
                     map[tile.tileX, tile.tileY] = groundTile;
                 }
             }
             else 
             {
-                Room survivingRoom = new Room(roomRegion, map);
-                survivingRooms.Add(survivingRoom);
+                Platform survivingPlatform = new Platform(platformRegion, map);
+                survivingPlatforms.Add(survivingPlatform);
             }
-        }
-        survivingRooms.Sort();
-        survivingRooms[0].isMainRoom = true;
-        survivingRooms[0].isAccessibleFromMainRoom = true;
-    }
-
-    void ConnectClosestRooms(List<Room> allRooms, bool forceAccessibilityFromMainRoom = false) 
-    {
-        List<Room> roomListA = new List<Room>();
-        List<Room> roomListB = new List<Room>();
-
-        if(forceAccessibilityFromMainRoom) 
-        {
-            foreach(Room room in allRooms) 
-            {
-                if(room.isAccessibleFromMainRoom) 
-                {
-                    roomListB.Add(room);
-                } else 
-                {
-                    roomListA.Add(room);
-                }
-            }
-        } else 
-        {
-            roomListA = allRooms;
-            roomListB = allRooms;
-        }
-
-        int bestDistance = 0;
-        Coordinate bestTileA = new Coordinate();
-        Coordinate bestTileB = new Coordinate();
-        Room bestRoomA = new Room();
-        Room bestRoomB = new Room();
-        bool possibleConnectionFound = false;
-
-        foreach(Room roomA in roomListA) 
-        {
-            if(!forceAccessibilityFromMainRoom) 
-            {
-                possibleConnectionFound = false;
-
-                if(roomA.connectedRooms.Count > 0) 
-                {
-                    continue;
-                }
-            }
-
-            foreach (Room roomB in roomListB) 
-            {
-                if(roomA == roomB || roomA.IsConnected(roomB)) 
-                {
-                    continue;
-                }
-
-                for(int tileIndexA = 0; tileIndexA < roomA.edgeTiles.Count; tileIndexA++) 
-                {
-                    for(int tileIndexB = 0; tileIndexB < roomB.edgeTiles.Count; tileIndexB++) 
-                    {
-                        Coordinate tileA = roomA.edgeTiles[tileIndexA];
-                        Coordinate tileB = roomB.edgeTiles[tileIndexB];
-                        int distanceBetweenRooms = (int)(Mathf.Pow(tileA.tileX - tileB.tileX, 2) + MathF.Pow(tileA.tileY - tileB.tileY, 2));
-
-                        if(distanceBetweenRooms < bestDistance || !possibleConnectionFound) 
-                        {
-                            bestDistance = distanceBetweenRooms;
-                            possibleConnectionFound = true;
-                            bestTileA = tileA;
-                            bestTileB = tileB;
-                            bestRoomA = roomA;
-                            bestRoomB = roomB;
-                        }
-                    }
-                }
-            }
-        }
-
-        if(!forceAccessibilityFromMainRoom) 
-        {
-            ConnectClosestRooms(allRooms, true);
         }
     }
 
@@ -289,23 +207,16 @@ public class MapGenerator : MonoBehaviour
 
     void RandomFillMap() 
     {
-        if(useRandomSeed) 
-        {
-            seed = Time.time.ToString();
-        }
-
-        System.Random randNumGenerator = new System.Random(seed.GetHashCode());
+        float xOffset = UnityEngine.Random.Range(-10000f, 10000);
+        float yOffset = UnityEngine.Random.Range(-10000f, 10000);
 
         for(int x = 0; x < width; x++) 
         {
             for(int y = 0; y < height; y++) {
                 if(x == 0 || x == width -1 || y == 0 || y == height -1) 
-                {
                     map[x,y] = groundTile;
-                } else 
-                {
-                    map[x,y] = (randNumGenerator.Next(0,100) < randomFillPercent)? groundTile : platformTile;
-                }
+                else 
+                    map[x,y] = ((Mathf.PerlinNoise(x * xOffset, y * yOffset)) < randomFillPercent)? groundTile : platformTile;
             }
         }
     }
@@ -315,22 +226,19 @@ public class MapGenerator : MonoBehaviour
         for(int x = 0; x < width; x++) {
             for(int y = 0; y < height; y++) 
             {
-                int neighbourgroundTiles = GetSurroundingWallCount(x,y);
+                int neighbourgroundTiles = GetSurroundingGroundTiles(x,y);
 
                 if(neighbourgroundTiles > 4) 
-                {
                     map[x,y] = groundTile;
-                } else if (neighbourgroundTiles < 4) 
-                {
+                else if (neighbourgroundTiles < 4) 
                     map[x,y] = platformTile;
-                }
             }   
         }
     }
 
-    int GetSurroundingWallCount(int gridX, int gridY) 
+    int GetSurroundingGroundTiles(int gridX, int gridY) 
     {
-        int wallCount = 0;
+        int groundCount = 0;
         for(int neighbourX = gridX -1; neighbourX <= gridX + 1; neighbourX++) 
         {
             for(int neighbourY = gridY -1; neighbourY <= gridY + 1; neighbourY++) 
@@ -338,22 +246,14 @@ public class MapGenerator : MonoBehaviour
                 if(IsInMapRange(neighbourX, neighbourY)) 
                 {
                     if(neighbourX != gridX || neighbourY != gridY)
-                    {
-                        wallCount += map[neighbourX, neighbourY];
-                    }
+                        groundCount += map[neighbourX, neighbourY];
                 } else 
                 {
-                    wallCount++;
+                    groundCount++;
                 }
             }
         }
-        return wallCount;
-    }
-
-    public int GetHeightValueFromHeightMap (int x, int y)
-    {
-        Debug.Log("X : " + x + (-width/2) + " Y: " + y + (-height/2));
-        return borderedHeightMap[x + (-width/2), y + (-height/2)];
+        return groundCount;
     }
 
     struct Coordinate 
@@ -367,24 +267,20 @@ public class MapGenerator : MonoBehaviour
         }
     }
 
-    class Room : IComparable<Room> 
+    class Platform
     {
         public List<Coordinate> tiles;
         public List<Coordinate> edgeTiles;
-        public List<Room> connectedRooms;
-        public int roomSize;
-        public bool isAccessibleFromMainRoom;
-        public bool isMainRoom;
-        public int roomHeight;
+        public int platformSize;
+        public int platformHeight;
 
-        public Room() {}
+        public Platform() {}
 
-        public Room(List<Coordinate> platformTiles, int[,] map) 
+        public Platform(List<Coordinate> platformTiles, int[,] map) 
         {
             tiles = platformTiles;
-            roomSize = tiles.Count;
-            roomHeight = UnityEngine.Random.Range(20, 95);
-            connectedRooms = new List<Room>();
+            platformSize = tiles.Count;
+            platformHeight = UnityEngine.Random.Range(20, 95);
             edgeTiles = new List<Coordinate>();
             foreach(Coordinate tile in tiles) 
             {
@@ -395,33 +291,9 @@ public class MapGenerator : MonoBehaviour
                         if(x == tile.tileX || y == tile.tileY) 
                         {
                             if(map[x,y] == 1) 
-                            {
                                 edgeTiles.Add(tile);
-                            }
                         }
                     }
-                }
-            }
-        }
-
-        public int CompareTo(Room otherRoom) 
-        {
-            return otherRoom.roomSize.CompareTo(roomSize);
-        }
-
-        public bool IsConnected(Room otherRoom) 
-        {
-            return connectedRooms.Contains(otherRoom);
-        }
-
-        public void SetAccessibleibleFromMainRoom() 
-        {
-            if(!isAccessibleFromMainRoom)
-            {
-                isAccessibleFromMainRoom = true;
-                foreach(Room connectedRoom in connectedRooms) 
-                {
-                    connectedRoom.SetAccessibleibleFromMainRoom();
                 }
             }
         }

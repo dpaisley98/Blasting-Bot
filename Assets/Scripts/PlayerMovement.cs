@@ -5,7 +5,6 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     KeyCode jump = KeyCode.Space;
-    KeyCode shoot = KeyCode.Mouse0;
     [Header("Movement")]
     public float movementSpeed;
     public float terminalVelocity;
@@ -14,19 +13,16 @@ public class PlayerMovement : MonoBehaviour
     bool readyToJump;
     [Header("Ground Check")]
     public float playerHeight;
-    public LayerMask whatIsGround;
+    public LayerMask ground;
     public bool onGround;
     public Transform orientation;
     float horizontalInput, verticalInput;
     Vector3 movementDirection;
-    Vector3 recoilDirection;
     Rigidbody rigidBody;
-    private GunController gun;
 
     // Start is called before the first frame update
     void Start()
     {
-        gun = this.GetComponent<GunController>();
         rigidBody = this.GetComponent<Rigidbody>();
         rigidBody.freezeRotation = true;
         readyToJump = true;
@@ -35,7 +31,7 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        onGround = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsGround);
+        onGround = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, ground);
         PlayerInput();
         if(onGround)
             rigidBody.drag = groundDrag;
@@ -60,12 +56,6 @@ public class PlayerMovement : MonoBehaviour
             readyToJump = false;
             Jump();
             Invoke(nameof(ResetJump), jumpCooldown);
-        }
-
-        if(Input.GetKey(shoot))
-        {
-            //recoilDirection = gun.Shoot();
-            //rigidBody.AddForce((recoilDirection.normalized * -1), ForceMode.Impulse);
         }
     }
 

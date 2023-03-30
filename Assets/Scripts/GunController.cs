@@ -16,7 +16,6 @@ public class GunController : MonoBehaviour
     public Camera playerCam;
     public Transform gunPoint;
     private Vector3 middleOfScreen;
-    public TextMeshProUGUI ammoDisplay;
 
 
     private void Awake() 
@@ -30,16 +29,6 @@ public class GunController : MonoBehaviour
 
     void Update() 
     {
-        MyInput();    
-
-        if (ammoDisplay != null)
-        {
-            ammoDisplay.SetText(bulletsLeft / bulletsPerTap + " | " + magazineSize / bulletsPerTap);
-        }
-    }
-
-    private void MyInput()
-    {
         if (allowButtonHold)
             shooting = Input.GetKey(KeyCode.Mouse0);
         else
@@ -52,7 +41,7 @@ public class GunController : MonoBehaviour
         {
             bulletsShot = 0;
             Shoot();
-        }
+        } 
     }
 
     bool CanShoot() 
@@ -105,7 +94,7 @@ public class GunController : MonoBehaviour
             Invoke("ResetShot", shootingInterval);
             allowInvoke = false;
             bool cancelPreviousForce = playerBody.velocity.magnitude > 0;
-            StartCoroutine(ApplyRecoilForceForDuration(-bulletDirectionWithSpread.normalized, recoilForce, 5f, cancelPreviousForce));
+            StartCoroutine(ApplyRecoilForceForDuration(-bulletDirectionWithSpread.normalized, recoilForce, 5f, false));
         }
 
         if (bulletsShot < bulletsPerTap && bulletsLeft > 0)
@@ -136,12 +125,8 @@ public class GunController : MonoBehaviour
         float initialVelocity = playerBody.velocity.magnitude;
 
         if (cancelPreviousForce)
-        {
-            // Cancel out any previous force
             playerBody.velocity = Vector3.zero;
-        }
-
-        // Apply the new force
+        
         playerBody.AddForce(forceDirection * forceMagnitude, ForceMode.Impulse);
         playerBody.AddForce(forceDirection);
 
@@ -149,19 +134,15 @@ public class GunController : MonoBehaviour
         {
             yield return null;
 
-            // Calculate the current speed and direction
             Vector3 currentDirection = playerBody.velocity.normalized;
             float currentSpeed = playerBody.velocity.magnitude;
 
-            // Calculate the deceleration force required to reach the terminal velocity
             float decelerationForceMagnitude = (currentSpeed * currentSpeed) / (2 * (transform.position - playerBody.position).magnitude);
             Vector3 decelerationForce = -currentDirection * decelerationForceMagnitude;
 
-            // Reduce the applied force by the deceleration force
             playerBody.velocity += decelerationForce * Time.deltaTime;
         }
 
-        // Reset the velocity to the terminal velocity
         playerBody.velocity = playerBody.velocity.normalized * terminalVelocity;
     }
 
